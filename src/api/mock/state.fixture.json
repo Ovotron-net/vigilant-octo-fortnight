@@ -1,0 +1,291 @@
+{
+  "operational": {
+    "state": "ready",
+    "ready": true,
+    "reasons": [],
+    "policy_revision": "pol-2026-07-24.1",
+    "config_revision": "cfg-a1b2c3",
+    "sensor_id": "edge-gw-01",
+    "boot_id": "boot-9f3e2a1c",
+    "queue_depth": 12,
+    "queue_capacity": 10000,
+    "app_queue_drops_total": 0,
+    "kernel_drops_total": 3,
+    "sources": [
+      {
+        "capture_point": "wan",
+        "interface": "eth0",
+        "state": "running",
+        "source_generation": "1",
+        "last_error": null,
+        "kernel_packets": 1842291,
+        "kernel_drops": 3
+      },
+      {
+        "capture_point": "lan",
+        "interface": "eth1",
+        "state": "running",
+        "source_generation": "1",
+        "last_error": null,
+        "kernel_packets": 902441,
+        "kernel_drops": 0
+      }
+    ]
+  },
+  "totals": {
+    "observations": 2744732,
+    "complete": 2744100,
+    "partial": 412,
+    "undecodable": 220,
+    "matched_observations": 1844,
+    "rule_matches": 1912,
+    "episodes_started": 128,
+    "episodes_progressed": 4102,
+    "episodes_closed": 91
+  },
+  "rules": [
+    {
+      "id": "deny-exfil-ssh",
+      "description": "Block unexpected SSH egress from prod CIDRs",
+      "enabled": true,
+      "match": {
+        "source_cidrs": ["10.20.0.0/16"],
+        "destination_cidrs": ["0.0.0.0/0"],
+        "protocol": "tcp",
+        "destination_ports": [22]
+      },
+      "severity": "high",
+      "enforcement": "nftables_drop_candidate"
+    },
+    {
+      "id": "dns-tunnel-watch",
+      "description": "Alert on high-volume DNS to non-resolvers",
+      "enabled": true,
+      "match": {
+        "source_cidrs": ["10.0.0.0/8"],
+        "destination_cidrs": ["0.0.0.0/0"],
+        "protocol": "udp",
+        "destination_ports": [53]
+      },
+      "severity": "medium",
+      "enforcement": "none"
+    },
+    {
+      "id": "legacy-rdp",
+      "description": "Legacy RDP exposure (disabled)",
+      "enabled": false,
+      "match": {
+        "source_cidrs": ["0.0.0.0/0"],
+        "destination_cidrs": ["10.30.0.0/16"],
+        "protocol": "tcp",
+        "destination_ports": [3389]
+      },
+      "severity": "critical",
+      "enforcement": "nftables_drop_candidate"
+    },
+    {
+      "id": "any-icmp-scan",
+      "description": "Watch ICMP sweeps",
+      "enabled": true,
+      "match": {
+        "source_cidrs": ["0.0.0.0/0"],
+        "destination_cidrs": ["10.0.0.0/8"],
+        "protocol": "icmp",
+        "destination_ports": "any"
+      },
+      "severity": "low",
+      "enforcement": "none"
+    }
+  ],
+  "active_episodes": [
+    {
+      "episode_id": "ep-01hqxyz",
+      "phase": "progress",
+      "rule_id": "deny-exfil-ssh",
+      "severity": "high",
+      "enforcement": "nftables_drop_candidate",
+      "source": "10.20.14.88",
+      "destination": "198.51.100.40",
+      "protocol": "tcp",
+      "destination_port": 22,
+      "observation_count": 47,
+      "observed_bytes": 12840,
+      "first_observed_at": "2026-07-24T14:02:11.120000+00:00",
+      "last_observed_at": "2026-07-24T14:18:44.901000+00:00",
+      "close_reason": null
+    },
+    {
+      "episode_id": "ep-01hqzab",
+      "phase": "start",
+      "rule_id": "dns-tunnel-watch",
+      "severity": "medium",
+      "enforcement": "none",
+      "source": "10.1.2.55",
+      "destination": "203.0.113.9",
+      "protocol": "udp",
+      "destination_port": 53,
+      "observation_count": 3,
+      "observed_bytes": 612,
+      "first_observed_at": "2026-07-24T14:18:40.010000+00:00",
+      "last_observed_at": "2026-07-24T14:18:42.330000+00:00",
+      "close_reason": null
+    },
+    {
+      "episode_id": "ep-01hqzz1",
+      "phase": "progress",
+      "rule_id": "any-icmp-scan",
+      "severity": "low",
+      "enforcement": "none",
+      "source": "203.0.113.77",
+      "destination": "10.0.0.1",
+      "protocol": "icmp",
+      "destination_port": null,
+      "observation_count": 120,
+      "observed_bytes": 7680,
+      "first_observed_at": "2026-07-24T13:55:01.000000+00:00",
+      "last_observed_at": "2026-07-24T14:17:59.000000+00:00",
+      "close_reason": null
+    }
+  ],
+  "active_episodes_truncated": false,
+  "recent_events": [
+    {
+      "schema_version": 2,
+      "event_id": "evt-1001",
+      "event_type": "violation_episode",
+      "sensor_id": "edge-gw-01",
+      "boot_id": "boot-9f3e2a1c",
+      "sequence": 1001,
+      "emitted_at": "2026-07-24T14:02:11.120000+00:00",
+      "policy_revision": "pol-2026-07-24.1",
+      "payload": {
+        "episode_id": "ep-01hqxyz",
+        "phase": "start",
+        "rule": {
+          "id": "deny-exfil-ssh",
+          "description": "Block unexpected SSH egress from prod CIDRs",
+          "severity": "high",
+          "enforcement": "nftables_drop_candidate"
+        },
+        "flow": {
+          "ip_version": 4,
+          "source": "10.20.14.88",
+          "destination": "198.51.100.40",
+          "protocol": "tcp",
+          "source_port": 49152,
+          "destination_port": 22,
+          "fields": "5tuple",
+          "decode_reason": null
+        },
+        "first_observed_at": "2026-07-24T14:02:11.120000+00:00",
+        "last_observed_at": "2026-07-24T14:02:11.120000+00:00",
+        "duration_seconds": 0,
+        "observation_count": 1,
+        "observed_bytes": 60,
+        "late_observation_count": 0,
+        "per_capture_point": {
+          "wan": { "observations": 1, "observed_bytes": 60 }
+        },
+        "truncated": false,
+        "close_reason": null
+      }
+    },
+    {
+      "schema_version": 2,
+      "event_id": "evt-1002",
+      "event_type": "violation_episode",
+      "sensor_id": "edge-gw-01",
+      "boot_id": "boot-9f3e2a1c",
+      "sequence": 1002,
+      "emitted_at": "2026-07-24T14:10:00.000000+00:00",
+      "policy_revision": "pol-2026-07-24.1",
+      "payload": {
+        "episode_id": "ep-01hqxyz",
+        "phase": "progress",
+        "rule": {
+          "id": "deny-exfil-ssh",
+          "description": "Block unexpected SSH egress from prod CIDRs",
+          "severity": "high",
+          "enforcement": "nftables_drop_candidate"
+        },
+        "flow": {
+          "ip_version": 4,
+          "source": "10.20.14.88",
+          "destination": "198.51.100.40",
+          "protocol": "tcp",
+          "source_port": 49152,
+          "destination_port": 22,
+          "fields": "5tuple",
+          "decode_reason": null
+        },
+        "first_observed_at": "2026-07-24T14:02:11.120000+00:00",
+        "last_observed_at": "2026-07-24T14:10:00.000000+00:00",
+        "duration_seconds": 468.88,
+        "observation_count": 30,
+        "observed_bytes": 8400,
+        "late_observation_count": 0,
+        "truncated": false,
+        "close_reason": null
+      }
+    },
+    {
+      "schema_version": 2,
+      "event_id": "evt-1003",
+      "event_type": "system",
+      "sensor_id": "edge-gw-01",
+      "boot_id": "boot-9f3e2a1c",
+      "sequence": 1003,
+      "emitted_at": "2026-07-24T14:12:00.000000+00:00",
+      "policy_revision": "pol-2026-07-24.1",
+      "payload": {
+        "name": "policy_reloaded",
+        "policy_revision": "pol-2026-07-24.1"
+      }
+    },
+    {
+      "schema_version": 2,
+      "event_id": "evt-1004",
+      "event_type": "violation_episode",
+      "sensor_id": "edge-gw-01",
+      "boot_id": "boot-9f3e2a1c",
+      "sequence": 1004,
+      "emitted_at": "2026-07-24T14:18:40.010000+00:00",
+      "policy_revision": "pol-2026-07-24.1",
+      "payload": {
+        "episode_id": "ep-01hqzab",
+        "phase": "start",
+        "rule": {
+          "id": "dns-tunnel-watch",
+          "description": "Alert on high-volume DNS to non-resolvers",
+          "severity": "medium",
+          "enforcement": "none"
+        },
+        "flow": {
+          "ip_version": 4,
+          "source": "10.1.2.55",
+          "destination": "203.0.113.9",
+          "protocol": "udp",
+          "source_port": 53001,
+          "destination_port": 53,
+          "fields": "5tuple",
+          "decode_reason": null
+        },
+        "first_observed_at": "2026-07-24T14:18:40.010000+00:00",
+        "last_observed_at": "2026-07-24T14:18:40.010000+00:00",
+        "duration_seconds": 0,
+        "observation_count": 1,
+        "observed_bytes": 128,
+        "truncated": false,
+        "close_reason": null
+      }
+    }
+  ],
+  "recent_events_truncated": false,
+  "journal": { "healthy": true },
+  "notifier": {
+    "sent": 88,
+    "failed": 1,
+    "dropped": 0,
+    "suppressed": 4
+  }
+}

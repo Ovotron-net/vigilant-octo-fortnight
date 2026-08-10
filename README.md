@@ -1,4 +1,4 @@
-# ibn-monitor ops console
+# IBN Dashboard OPS Console
 
 Extractable React 19 + TanStack operator UI for the sensor’s read-only
 `GET /api/state` snapshot. The embedded zero-deps dashboard in the Python

@@ -24,5 +24,9 @@ describe("evolveMockState", () => {
         expect(curr[key]).toBeGreaterThanOrEqual(prev[key]);
       }
     }
+    // High-rate series should actually move over multi-second windows.
+    expect(samples.at(-1)!.totals.observations).toBeGreaterThan(
+      samples[0]!.totals.observations,
+    );
   });
 });

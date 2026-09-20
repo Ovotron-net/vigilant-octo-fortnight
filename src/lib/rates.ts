@@ -30,6 +30,9 @@ export type RateSnapshot = {
 
 export const DEFAULT_HISTORY_CAP = 90;
 
+/** Ignore rate windows shorter than this (focus + interval clustering). */
+export const DEFAULT_MIN_RATE_DT_MS = 250;
+
 /**
  * Append a sample to a ring buffer. Drops the oldest when over `cap`.
  * Ignores duplicate timestamps (same poll re-delivery).
@@ -50,13 +53,15 @@ export function appendTotalsSample(
 /**
  * Per-second rates from counter deltas. Counter resets (negative delta)
  * yield 0 for that series so a sensor restart does not draw a cliff down.
+ * Windows shorter than `minDtMs` are skipped (focus/interval clustering).
  */
 export function rateBetween(
   prev: TotalsSample,
   curr: TotalsSample,
+  minDtMs = DEFAULT_MIN_RATE_DT_MS,
 ): RateSnapshot | null {
   const dtMs = curr.t - prev.t;
-  if (dtMs <= 0) return null;
+  if (dtMs <= 0 || dtMs < minDtMs) return null;
   const dtSec = dtMs / 1000;
   const rates = {} as Record<TotalsKey, number>;
   for (const key of TOTALS_KEYS) {
@@ -68,11 +73,12 @@ export function rateBetween(
 
 export function buildRateHistory(
   samples: readonly TotalsSample[],
+  minDtMs = DEFAULT_MIN_RATE_DT_MS,
 ): RateSnapshot[] {
   if (samples.length < 2) return [];
   const out: RateSnapshot[] = [];
   for (let i = 1; i < samples.length; i++) {
-    const snap = rateBetween(samples[i - 1]!, samples[i]!);
+    const snap = rateBetween(samples[i - 1]!, samples[i]!, minDtMs);
     if (snap) out.push(snap);
   }
   return out;

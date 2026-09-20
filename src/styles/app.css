@@ -648,6 +648,17 @@ code,
   border-color: oklch(78% 0.14 75 / 0.22);
 }
 
+.status__reason {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.85;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .badge {
   display: inline-flex;
   font-size: 0.625rem;
@@ -845,6 +856,11 @@ table.data tr:last-child td {
 .banner--error {
   background: oklch(68% 0.19 25 / 0.1);
   border-color: oklch(68% 0.19 25 / 0.22);
+}
+
+.banner--warn {
+  background: oklch(78% 0.14 75 / 0.1);
+  border-color: oklch(78% 0.14 75 / 0.22);
 }
 
 .virtual-row {

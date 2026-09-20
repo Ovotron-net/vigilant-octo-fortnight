@@ -54,6 +54,13 @@ describe("rateBetween", () => {
     const snap = rateBetween(prev, curr);
     expect(snap!.rates.observations).toBe(0);
   });
+
+  it("skips windows shorter than minDtMs", () => {
+    const prev: TotalsSample = { t: 1000, totals: totals({ observations: 100 }) };
+    const curr: TotalsSample = { t: 1050, totals: totals({ observations: 101 }) };
+    expect(rateBetween(prev, curr, 250)).toBeNull();
+    expect(rateBetween(prev, curr, 0)?.rates.observations).toBe(20);
+  });
 });
 
 describe("buildRateHistory", () => {

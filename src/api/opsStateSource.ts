@@ -10,6 +10,7 @@ import type { OpsState } from "./types";
 import type { OpsConfig, OpsMode } from "./config";
 import { loadOpsConfig } from "./config";
 import { evolveMockState } from "./mock/evolve";
+import { parseOpsState } from "./validateOpsState";
 
 export type OpsStateSource = {
   readonly mode: OpsMode;
@@ -74,7 +75,13 @@ function createHttpSource(
       if (!response.ok) {
         throw new Error(`ops state HTTP ${response.status}`);
       }
-      return (await response.json()) as OpsState;
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        throw new Error("ops state response is not JSON");
+      }
+      return parseOpsState(body);
     },
   };
 }

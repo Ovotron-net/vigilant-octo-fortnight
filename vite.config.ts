@@ -10,6 +10,13 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, rootDir, "");
   const proxyTarget = env.VITE_OPS_PROXY_TARGET || "http://127.0.0.1:9109";
 
+  const apiProxy = {
+    "/api/state": {
+      target: proxyTarget,
+      changeOrigin: true,
+    },
+  };
+
   return {
     plugins: [react()],
     resolve: {
@@ -19,12 +26,10 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      proxy: {
-        "/api": {
-          target: proxyTarget,
-          changeOrigin: true,
-        },
-      },
+      proxy: apiProxy,
+    },
+    preview: {
+      proxy: apiProxy,
     },
     test: {
       environment: "node",

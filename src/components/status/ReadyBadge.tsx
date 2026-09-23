@@ -2,17 +2,26 @@ export function ReadyBadge({
   ready,
   state,
   connectionError,
+  invalidData,
   reasons,
 }: {
   ready?: boolean;
   state?: string;
   connectionError?: boolean;
+  invalidData?: boolean;
   reasons?: readonly string[];
 }) {
   if (connectionError) {
     return (
       <span className="status status--stale" role="status">
         connection lost
+      </span>
+    );
+  }
+  if (invalidData) {
+    return (
+      <span className="status status--stale" role="status">
+        invalid data
       </span>
     );
   }

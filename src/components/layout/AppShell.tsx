@@ -3,6 +3,7 @@ import { useOpsState } from "@/hooks/useOpsState";
 import { TotalsHistoryProvider } from "@/hooks/TotalsHistoryContext";
 import { ReadyBadge } from "@/components/status/ReadyBadge";
 import { getOpsStateSource } from "@/api/opsStateSource";
+import { OpsStateValidationError } from "@/api/validateOpsState";
 import { formatRelativeAge } from "@/lib/time";
 
 const NAV = [
@@ -19,6 +20,7 @@ export function AppShell() {
   const op = query.data?.operational;
   const dataUpdatedAt = query.dataUpdatedAt;
   const ageMs = dataUpdatedAt ? Date.now() - dataUpdatedAt : null;
+  const isValidationError = query.error instanceof OpsStateValidationError;
   const sourceErrors =
     op?.sources
       .map((s) => s.last_error)
@@ -45,7 +47,10 @@ export function AppShell() {
               <ReadyBadge
                 ready={op?.ready}
                 state={op?.state}
-                connectionError={query.isError && !query.data}
+                connectionError={
+                  query.isError && !query.data && !isValidationError
+                }
+                invalidData={query.isError && !query.data && isValidationError}
                 reasons={notReadyReasons}
               />
             </div>
@@ -92,8 +97,18 @@ export function AppShell() {
         <main className="app-main">
           {query.isError && !query.data ? (
             <div className="banner banner--error" role="alert">
-              Cannot reach <code>/api/state</code>. Start the sensor ops listener
-              or run mock mode (<code>npm run dev</code>).
+              {isValidationError ? (
+                <>
+                  <code>/api/state</code> responded but returned data the
+                  console cannot use. Check the sensor version matches this
+                  console's API contract.
+                </>
+              ) : (
+                <>
+                  Cannot reach <code>/api/state</code>. Start the sensor ops
+                  listener or run mock mode (<code>npm run dev</code>).
+                </>
+              )}
             </div>
           ) : null}
           {op && !op.ready && notReadyReasons.length > 0 ? (

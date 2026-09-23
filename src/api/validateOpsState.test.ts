@@ -75,6 +75,64 @@ describe("parseOpsState", () => {
     (bad.operational as { ready: unknown }).ready = "yes";
     expect(() => parseOpsState(bad)).toThrow(/operational\.ready/);
   });
+
+  it("rejects a source with an object-valued interface field", () => {
+    const bad = validState();
+    (bad.operational.sources[0] as unknown as Record<string, unknown>).interface =
+      { nested: true };
+    expect(() => parseOpsState(bad)).toThrow(/sources\[0\]\.interface/);
+  });
+
+  it("rejects a rule element missing match", () => {
+    const bad = validState() as unknown as Record<string, unknown>;
+    bad.rules = [{}];
+    expect(() => parseOpsState(bad)).toThrow(/rules\[0\]\.match/);
+  });
+
+  it("accepts a well-formed rule element", () => {
+    const good = validState();
+    good.rules = [
+      {
+        id: "r1",
+        description: "test rule",
+        enabled: true,
+        match: {
+          source_cidrs: ["10.0.0.0/8"],
+          destination_cidrs: ["0.0.0.0/0"],
+          protocol: "tcp",
+          destination_ports: [443],
+        },
+        severity: "high",
+        enforcement: "none",
+      },
+    ];
+    const parsed = parseOpsState(good);
+    expect(parsed.rules[0]!.match.protocol).toBe("tcp");
+  });
+
+  it("rejects an episode element missing required fields", () => {
+    const bad = validState() as unknown as Record<string, unknown>;
+    bad.active_episodes = [{ episode_id: "e1" }];
+    expect(() => parseOpsState(bad)).toThrow(/active_episodes\[0\]\.phase/);
+  });
+
+  it("rejects an evidence event whose violation payload is malformed", () => {
+    const bad = validState() as unknown as Record<string, unknown>;
+    bad.recent_events = [
+      {
+        schema_version: 1,
+        event_id: "ev1",
+        event_type: "violation_episode",
+        sensor_id: "s1",
+        boot_id: "b1",
+        sequence: 1,
+        emitted_at: "2024-01-01T00:00:00Z",
+        policy_revision: null,
+        payload: { episode_id: "e1", phase: "open", rule: {} },
+      },
+    ];
+    expect(() => parseOpsState(bad)).toThrow(/recent_events\[0\]\.payload\.rule\.id/);
+  });
 });
 
 describe("isViolationPayload", () => {

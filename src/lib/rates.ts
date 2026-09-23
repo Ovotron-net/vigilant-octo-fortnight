@@ -71,15 +71,24 @@ export function rateBetween(
   return { t: curr.t, dtSec, rates };
 }
 
+/**
+ * A window shorter than `minDtMs` is not dropped — the prior accepted sample
+ * stays the baseline until a later sample accumulates a long-enough window,
+ * so clustered deltas are aggregated rather than lost.
+ */
 export function buildRateHistory(
   samples: readonly TotalsSample[],
   minDtMs = DEFAULT_MIN_RATE_DT_MS,
 ): RateSnapshot[] {
   if (samples.length < 2) return [];
   const out: RateSnapshot[] = [];
+  let baseline = samples[0]!;
   for (let i = 1; i < samples.length; i++) {
-    const snap = rateBetween(samples[i - 1]!, samples[i]!, minDtMs);
-    if (snap) out.push(snap);
+    const snap = rateBetween(baseline, samples[i]!, minDtMs);
+    if (snap) {
+      out.push(snap);
+      baseline = samples[i]!;
+    }
   }
   return out;
 }

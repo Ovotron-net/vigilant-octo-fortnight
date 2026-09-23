@@ -145,8 +145,8 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
     return sort.desc ? " ↓" : " ↑";
   };
 
-  const sortAria = (colId: string): "none" | "ascending" | "descending" => {
-    if (!sort || sort.id !== colId) return "none";
+  const sortAria = (colId: string): "ascending" | "descending" | undefined => {
+    if (!sort || sort.id !== colId) return undefined;
     return sort.desc ? "descending" : "ascending";
   };
 
@@ -213,35 +213,38 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
       {toolbar}
 
       {useVirtual ? (
-        <div className="table-wrap">
-          <div
-            className="virtual-header"
-            style={{ gridTemplateColumns: gridTemplate }}
-            role="row"
-          >
-            {visCols.map((col) => (
-              <div
-                key={col.id}
-                role="columnheader"
-                tabIndex={col.sortable === false ? undefined : 0}
-                aria-sort={
-                  col.sortable === false ? undefined : sortAria(col.id)
-                }
-                className={col.sortable === false ? undefined : "sortable"}
-                onClick={() => toggleSort(col)}
-                onKeyDown={(e) => onSortKeyDown(e, col)}
-                style={{
-                  cursor: col.sortable === false ? undefined : "pointer",
-                }}
-              >
-                {col.header}
-                {sortMark(col.id)}
-              </div>
-            ))}
+        <div className="table-wrap" role="table">
+          <div role="rowgroup">
+            <div
+              className="virtual-header"
+              style={{ gridTemplateColumns: gridTemplate }}
+              role="row"
+            >
+              {visCols.map((col) => (
+                <div
+                  key={col.id}
+                  role="columnheader"
+                  tabIndex={col.sortable === false ? undefined : 0}
+                  aria-sort={
+                    col.sortable === false ? undefined : sortAria(col.id)
+                  }
+                  className={col.sortable === false ? undefined : "sortable"}
+                  onClick={() => toggleSort(col)}
+                  onKeyDown={(e) => onSortKeyDown(e, col)}
+                  style={{
+                    cursor: col.sortable === false ? undefined : "pointer",
+                  }}
+                >
+                  {col.header}
+                  {sortMark(col.id)}
+                </div>
+              ))}
+            </div>
           </div>
           <div
             ref={parentRef}
             className="table-scroll"
+            role="rowgroup"
             style={{ maxHeight: "28rem" }}
           >
             <div
@@ -257,6 +260,7 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
                   <div
                     key={getRowId(row)}
                     className="virtual-row"
+                    role="row"
                     style={{
                       gridTemplateColumns: gridTemplate,
                       position: "absolute",
@@ -268,7 +272,9 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
                     }}
                   >
                     {visCols.map((col) => (
-                      <div key={col.id}>{defaultCell(col, row)}</div>
+                      <div key={col.id} role="cell">
+                        {defaultCell(col, row)}
+                      </div>
                     ))}
                   </div>
                 );

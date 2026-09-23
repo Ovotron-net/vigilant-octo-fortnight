@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TruncationHint } from "@/components/common/TruncationHint";
@@ -6,7 +6,10 @@ import { gridTemplateFromColumns, runOpsListPipeline } from "./pipeline";
 import type { OpsColumn, OpsDataTableProps } from "./types";
 
 const ROW_H = 36;
-const VIRTUAL_THRESHOLD = 12;
+/** Enter virtual layout above this visible row count. */
+const VIRTUAL_ENTER = 12;
+/** Exit virtual layout at or below this count (hysteresis vs ENTER). */
+const VIRTUAL_EXIT = 8;
 const DEFAULT_COMPACT_LIMIT = 8;
 
 function defaultCell<T>(col: OpsColumn<T>, row: T): ReactNode {
@@ -26,6 +29,7 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
     getRowId,
     compact = false,
     emptyMessage,
+    filteredEmptyMessage = "No rows match the current filter.",
     truncated = false,
     truncationLabel,
     filterPlaceholder,
@@ -44,6 +48,7 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
       ? { id: initialSort.id, desc: initialSort.desc ?? false }
       : null,
   );
+  const [virtualSticky, setVirtualSticky] = useState(false);
 
   // First pass: rows only (virtual decision depends on row count, not cols).
   const rowPipeline = useMemo(
@@ -62,10 +67,20 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
     [rows, columns, facet, facetValue, filter, sort, compact, compactLimit],
   );
 
-  const useVirtual =
-    !preferStatic &&
-    !compact &&
-    rowPipeline.visible.length > VIRTUAL_THRESHOLD;
+  useEffect(() => {
+    if (preferStatic || compact) {
+      setVirtualSticky(false);
+      return;
+    }
+    const n = rowPipeline.visible.length;
+    setVirtualSticky((prev) => {
+      if (n > VIRTUAL_ENTER) return true;
+      if (n <= VIRTUAL_EXIT) return false;
+      return prev;
+    });
+  }, [rowPipeline.visible.length, preferStatic, compact]);
+
+  const useVirtual = !preferStatic && !compact && virtualSticky;
 
   const pipeline = useMemo(
     () =>
@@ -114,17 +129,65 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
     });
   };
 
+  const onSortKeyDown = (
+    e: KeyboardEvent,
+    col: OpsColumn<T>,
+  ) => {
+    if (col.sortable === false) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleSort(col);
+    }
+  };
+
   const sortMark = (colId: string) => {
     if (!sort || sort.id !== colId) return null;
     return sort.desc ? " ↓" : " ↑";
   };
 
+  const sortAria = (colId: string): "ascending" | "descending" | undefined => {
+    if (!sort || sort.id !== colId) return undefined;
+    return sort.desc ? "descending" : "ascending";
+  };
+
+  const showToolbar = !compact && (filterPlaceholder || facet);
+
+  const truncation = truncated && truncationLabel ? (
+    <TruncationHint truncated label={truncationLabel} />
+  ) : null;
+
+  const toolbar = showToolbar ? (
+    <div className="toolbar">
+      {filterPlaceholder ? (
+        <input
+          type="search"
+          placeholder={filterPlaceholder}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          aria-label={filterAriaLabel ?? filterPlaceholder}
+        />
+      ) : null}
+      {facet ? (
+        <select
+          value={facetValue}
+          onChange={(e) => setFacetValue(e.target.value)}
+          aria-label={facet.ariaLabel}
+        >
+          <option value="">{facet.allLabel ?? "All"}</option>
+          {facet.options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </div>
+  ) : null;
+
   if (rows.length === 0) {
     return (
       <div>
-        {truncated && truncationLabel ? (
-          <TruncationHint truncated label={truncationLabel} />
-        ) : null}
+        {truncation}
         <div className="table-wrap">
           <EmptyState>{emptyMessage}</EmptyState>
         </div>
@@ -132,65 +195,56 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
     );
   }
 
-  const showToolbar = !compact && (filterPlaceholder || facet);
+  if (visible.length === 0) {
+    return (
+      <div>
+        {truncation}
+        {toolbar}
+        <div className="table-wrap">
+          <EmptyState>{filteredEmptyMessage}</EmptyState>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {truncated && truncationLabel ? (
-        <TruncationHint truncated label={truncationLabel} />
-      ) : null}
-
-      {showToolbar ? (
-        <div className="toolbar">
-          {filterPlaceholder ? (
-            <input
-              type="search"
-              placeholder={filterPlaceholder}
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              aria-label={filterAriaLabel ?? filterPlaceholder}
-            />
-          ) : null}
-          {facet ? (
-            <select
-              value={facetValue}
-              onChange={(e) => setFacetValue(e.target.value)}
-              aria-label={facet.ariaLabel}
-            >
-              <option value="">{facet.allLabel ?? "All"}</option>
-              {facet.options.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          ) : null}
-        </div>
-      ) : null}
+      {truncation}
+      {toolbar}
 
       {useVirtual ? (
-        <div className="table-wrap">
-          <div
-            className="virtual-header"
-            style={{ gridTemplateColumns: gridTemplate }}
-          >
-            {visCols.map((col) => (
-              <div
-                key={col.id}
-                className={col.sortable === false ? undefined : "sortable"}
-                onClick={() => toggleSort(col)}
-                style={{
-                  cursor: col.sortable === false ? undefined : "pointer",
-                }}
-              >
-                {col.header}
-                {sortMark(col.id)}
-              </div>
-            ))}
+        <div className="table-wrap" role="table">
+          <div role="rowgroup">
+            <div
+              className="virtual-header"
+              style={{ gridTemplateColumns: gridTemplate }}
+              role="row"
+            >
+              {visCols.map((col) => (
+                <div
+                  key={col.id}
+                  role="columnheader"
+                  tabIndex={col.sortable === false ? undefined : 0}
+                  aria-sort={
+                    col.sortable === false ? undefined : sortAria(col.id)
+                  }
+                  className={col.sortable === false ? undefined : "sortable"}
+                  onClick={() => toggleSort(col)}
+                  onKeyDown={(e) => onSortKeyDown(e, col)}
+                  style={{
+                    cursor: col.sortable === false ? undefined : "pointer",
+                  }}
+                >
+                  {col.header}
+                  {sortMark(col.id)}
+                </div>
+              ))}
+            </div>
           </div>
           <div
             ref={parentRef}
             className="table-scroll"
+            role="rowgroup"
             style={{ maxHeight: "28rem" }}
           >
             <div
@@ -206,6 +260,7 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
                   <div
                     key={getRowId(row)}
                     className="virtual-row"
+                    role="row"
                     style={{
                       gridTemplateColumns: gridTemplate,
                       position: "absolute",
@@ -217,7 +272,9 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
                     }}
                   >
                     {visCols.map((col) => (
-                      <div key={col.id}>{defaultCell(col, row)}</div>
+                      <div key={col.id} role="cell">
+                        {defaultCell(col, row)}
+                      </div>
                     ))}
                   </div>
                 );
@@ -237,7 +294,12 @@ export function OpsDataTable<T>(props: OpsDataTableProps<T>) {
                       className={
                         col.sortable === false ? undefined : "sortable"
                       }
+                      tabIndex={col.sortable === false ? undefined : 0}
+                      aria-sort={
+                        col.sortable === false ? undefined : sortAria(col.id)
+                      }
                       onClick={() => toggleSort(col)}
+                      onKeyDown={(e) => onSortKeyDown(e, col)}
                     >
                       {col.header}
                       {sortMark(col.id)}

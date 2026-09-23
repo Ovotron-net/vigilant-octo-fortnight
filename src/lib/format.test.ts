@@ -34,5 +34,6 @@ describe("format helpers", () => {
   it("labels enforcement", () => {
     expect(enforcementLabel("nftables_drop_candidate")).toBe("drop");
     expect(enforcementLabel("none")).toBe("none");
+    expect(enforcementLabel("quarantine")).toBe("quarantine");
   });
 });

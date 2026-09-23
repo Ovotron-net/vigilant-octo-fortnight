@@ -113,6 +113,14 @@ describe("createOpsStateSource (HTTP adapter)", () => {
     await expect(source.load()).rejects.toThrow("ops state HTTP 503");
   });
 
+  it("rejects HTTP 200 with invalid JSON shape", async () => {
+    const fetchFn = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    const source = createOpsStateSource(liveConfig, { fetch: fetchFn as typeof fetch });
+    await expect(source.load()).rejects.toThrow(/ops state invalid/);
+  });
+
   it("uses empty base for proxy-relative /api/state", async () => {
     const fetchFn = vi.fn(async () =>
       new Response(JSON.stringify(minimalState()), { status: 200 }),

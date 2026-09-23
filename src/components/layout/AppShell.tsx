@@ -1,7 +1,9 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useOpsState } from "@/hooks/useOpsState";
+import { TotalsHistoryProvider } from "@/hooks/TotalsHistoryContext";
 import { ReadyBadge } from "@/components/status/ReadyBadge";
 import { getOpsStateSource } from "@/api/opsStateSource";
+import { OpsStateValidationError } from "@/api/validateOpsState";
 import { formatRelativeAge } from "@/lib/time";
 
 const NAV = [
@@ -18,72 +20,105 @@ export function AppShell() {
   const op = query.data?.operational;
   const dataUpdatedAt = query.dataUpdatedAt;
   const ageMs = dataUpdatedAt ? Date.now() - dataUpdatedAt : null;
+  const isValidationError = query.error instanceof OpsStateValidationError;
+  const sourceErrors =
+    op?.sources
+      .map((s) => s.last_error)
+      .filter((e): e is string => Boolean(e)) ?? [];
+  const notReadyReasons = [
+    ...(op && !op.ready ? op.reasons : []),
+    ...sourceErrors,
+  ];
 
   return (
-    <div className="app-shell">
-      <div className="ambient" aria-hidden />
-      <div className="grain" aria-hidden />
+    <TotalsHistoryProvider
+      totals={query.data?.totals}
+      dataUpdatedAt={dataUpdatedAt}
+    >
+      <div className="app-shell">
+        <div className="ambient" aria-hidden />
+        <div className="grain" aria-hidden />
 
-      <header className="app-header">
-        <div className="app-header__island">
-          <div className="app-header__brand">
-            <span className="app-header__eyebrow">ops</span>
-            <h1>ibn-monitor</h1>
-            <ReadyBadge
-              ready={op?.ready}
-              state={op?.state}
-              connectionError={query.isError && !query.data}
-            />
+        <header className="app-header">
+          <div className="app-header__island">
+            <div className="app-header__brand">
+              <span className="app-header__eyebrow">ops</span>
+              <h1>ibn-monitor</h1>
+              <ReadyBadge
+                ready={op?.ready}
+                state={op?.state}
+                connectionError={
+                  query.isError && !query.data && !isValidationError
+                }
+                invalidData={query.isError && !query.data && isValidationError}
+                reasons={notReadyReasons}
+              />
+            </div>
+
+            <nav className="app-nav" aria-label="Primary">
+              {NAV.map((item) => {
+                const active =
+                  item.to === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={active ? "active" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="meta">
+              {op?.sensor_id ? (
+                <span className="mono">{op.sensor_id}</span>
+              ) : null}
+              {op?.policy_revision ? (
+                <span title="policy revision">rev {op.policy_revision}</span>
+              ) : null}
+              <span title="last successful fetch">
+                {formatRelativeAge(ageMs)}
+              </span>
+              <span>
+                {source.mode} · {source.pollMs}ms
+              </span>
+              {query.isFetching ? <span>sync…</span> : null}
+              {query.isError && query.data ? (
+                <span className="status status--stale">poll error</span>
+              ) : null}
+            </div>
           </div>
+        </header>
 
-          <nav className="app-nav" aria-label="Primary">
-            {NAV.map((item) => {
-              const active =
-                item.to === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.to);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={active ? "active" : undefined}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="meta">
-            {op?.sensor_id ? (
-              <span className="mono">{op.sensor_id}</span>
-            ) : null}
-            {op?.policy_revision ? (
-              <span title="policy revision">rev {op.policy_revision}</span>
-            ) : null}
-            <span title="last successful fetch">
-              {formatRelativeAge(ageMs)}
-            </span>
-            <span>
-              {source.mode} · {source.pollMs}ms
-            </span>
-            {query.isFetching ? <span>sync…</span> : null}
-            {query.isError && query.data ? (
-              <span className="status status--stale">poll error</span>
-            ) : null}
-          </div>
-        </div>
-      </header>
-
-      <main className="app-main">
-        {query.isError && !query.data ? (
-          <div className="banner banner--error" role="alert">
-            Cannot reach <code>/api/state</code>. Start the sensor ops listener
-            or run mock mode (<code>npm run dev</code>).
-          </div>
-        ) : null}
-        <Outlet />
-      </main>
-    </div>
+        <main className="app-main">
+          {query.isError && !query.data ? (
+            <div className="banner banner--error" role="alert">
+              {isValidationError ? (
+                <>
+                  <code>/api/state</code> responded but returned data the
+                  console cannot use. Check the sensor version matches this
+                  console's API contract.
+                </>
+              ) : (
+                <>
+                  Cannot reach <code>/api/state</code>. Start the sensor ops
+                  listener or run mock mode (<code>npm run dev</code>).
+                </>
+              )}
+            </div>
+          ) : null}
+          {op && !op.ready && notReadyReasons.length > 0 ? (
+            <div className="banner banner--warn" role="status">
+              Not ready: {notReadyReasons.join(" · ")}
+            </div>
+          ) : null}
+          <Outlet />
+        </main>
+      </div>
+    </TotalsHistoryProvider>
   );
 }

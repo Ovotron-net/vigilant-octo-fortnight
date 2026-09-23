@@ -41,6 +41,8 @@ export type OpsDataTableProps<T> = {
 
   compact?: boolean;
   emptyMessage: ReactNode;
+  /** Shown when input rows exist but facet/filter yields none. */
+  filteredEmptyMessage?: ReactNode;
 
   truncated?: boolean;
   truncationLabel?: string;

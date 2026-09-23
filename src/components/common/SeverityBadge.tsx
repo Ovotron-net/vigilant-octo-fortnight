@@ -1,4 +1,5 @@
 import type { Severity } from "@/api/types";
+import { enforcementLabel } from "@/lib/format";
 
 const KNOWN = new Set(["low", "medium", "high", "critical"]);
 
@@ -21,10 +22,9 @@ export function EnforcementBadge({
   if (!enabled) {
     return <span className="badge badge--disabled">disabled</span>;
   }
+  const label = enforcementLabel(enforcement);
   const drop = enforcement === "nftables_drop_candidate";
-  return (
-    <span className={`badge badge--${drop ? "drop" : "none"}`}>
-      {drop ? "drop" : "none"}
-    </span>
-  );
+  const knownNone = !enforcement || enforcement === "none";
+  const kind = drop ? "drop" : knownNone ? "none" : "alert";
+  return <span className={`badge badge--${kind}`}>{label}</span>;
 }

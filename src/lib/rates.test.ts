@@ -54,6 +54,13 @@ describe("rateBetween", () => {
     const snap = rateBetween(prev, curr);
     expect(snap!.rates.observations).toBe(0);
   });
+
+  it("skips windows shorter than minDtMs", () => {
+    const prev: TotalsSample = { t: 1000, totals: totals({ observations: 100 }) };
+    const curr: TotalsSample = { t: 1050, totals: totals({ observations: 101 }) };
+    expect(rateBetween(prev, curr, 250)).toBeNull();
+    expect(rateBetween(prev, curr, 0)?.rates.observations).toBe(20);
+  });
 });
 
 describe("buildRateHistory", () => {
@@ -67,6 +74,21 @@ describe("buildRateHistory", () => {
     expect(rates).toHaveLength(2);
     expect(rates[0]!.rates.matched_observations).toBe(5);
     expect(rates[1]!.rates.matched_observations).toBe(10);
+  });
+
+  it("keeps the prior baseline across a skipped short window instead of dropping it", () => {
+    // (0,0) -> (100,10) is a 100ms window, skipped under the default 250ms
+    // floor. Its +10 delta must still be counted once a long-enough window
+    // accumulates, not discarded when (100,10) becomes a new baseline.
+    const rates = buildRateHistory([
+      { t: 0, totals: totals({ matched_observations: 0 }) },
+      { t: 100, totals: totals({ matched_observations: 10 }) },
+      { t: 2000, totals: totals({ matched_observations: 200 }) },
+    ]);
+    expect(rates).toHaveLength(1);
+    // Full 200-unit delta over the full 2s window from the original baseline.
+    expect(rates[0]!.dtSec).toBe(2);
+    expect(rates[0]!.rates.matched_observations).toBe(100);
   });
 });
 

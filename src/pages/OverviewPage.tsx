@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useOpsState } from "@/hooks/useOpsState";
-import { useTotalsHistory } from "@/hooks/useTotalsHistory";
+import { useTotalsHistoryContext } from "@/hooks/TotalsHistoryContext";
 import { MetricsGrid, OpsChips } from "@/components/metrics/MetricsGrid";
 import { RateCharts } from "@/components/metrics/RateCharts";
 import { RulesTable } from "@/components/rules/RulesTable";
@@ -19,8 +19,8 @@ function ViewAllLink({ to }: { to: "/episodes" | "/evidence" | "/rules" }) {
 }
 
 export function OverviewPage() {
-  const { data, isLoading, dataUpdatedAt } = useOpsState();
-  const history = useTotalsHistory(data?.totals, dataUpdatedAt);
+  const { data, isLoading } = useOpsState();
+  const history = useTotalsHistoryContext();
 
   if (isLoading && !data) {
     return <p className="empty empty--loading">Loading ops state…</p>;

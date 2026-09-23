@@ -145,11 +145,18 @@ export type OpsState = {
 export function isViolationPayload(
   payload: EvidenceEnvelopeDto["payload"],
 ): payload is ViolationEpisodePayload {
+  if (typeof payload !== "object" || payload === null) return false;
+  if (
+    !("episode_id" in payload) ||
+    !("phase" in payload) ||
+    !("rule" in payload)
+  ) {
+    return false;
+  }
+  const rule = (payload as { rule: unknown }).rule;
   return (
-    typeof payload === "object" &&
-    payload !== null &&
-    "episode_id" in payload &&
-    "phase" in payload &&
-    "rule" in payload
+    typeof rule === "object" &&
+    rule !== null &&
+    typeof (rule as { id?: unknown }).id === "string"
   );
 }

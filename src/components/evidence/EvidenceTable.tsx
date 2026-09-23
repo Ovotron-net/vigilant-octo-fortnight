@@ -85,7 +85,7 @@ export function EvidenceTable({
     <OpsDataTable
       rows={events}
       columns={columns}
-      getRowId={(e) => String(e.sequence)}
+      getRowId={(e) => e.event_id}
       compact={compact}
       emptyMessage="No evidence yet."
       truncated={truncated}

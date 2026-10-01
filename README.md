@@ -9,7 +9,7 @@ package remains the air-gapped fallback.
 - Vite + React 19
 - TanStack Query (2s poll, `keepPreviousData`)
 - TanStack Router (overview / episodes / evidence / rules)
-- TanStack Table + Virtual (sortable/filterable lists)
+- Custom data tables + TanStack Virtual (sortable/filterable lists)
 - Live rate charts from **totals deltas** between polls (SVG, no chart library)
 
 Rates: each successful `/api/state` poll appends a totals sample; the UI derives
@@ -20,8 +20,7 @@ so charts move without a live sensor.
 ## Quick start (mock — no sensor required)
 
 ```bash
-cd ops-console
-npm install
+npm ci
 npm run dev
 ```
 
@@ -37,7 +36,8 @@ Ops listener is loopback-only and has no CORS headers. Use the Vite proxy:
 npm run dev:live
 ```
 
-`dev:live` sets `VITE_USE_MOCK=false` and proxies `/api` → `http://127.0.0.1:9109`.
+`dev:live` sets `VITE_USE_MOCK=false` and proxies `/api/state` to
+`http://127.0.0.1:9109`.
 
 Optional env:
 
@@ -56,16 +56,26 @@ npm run dev:mock     # force mock mode
 npm run dev:live     # proxy to local sensor
 npm run typecheck
 npm run test
+npm run test:watch
 npm run build
 npm run preview
 ```
 
-## Contract
+## Documentation
 
-Types live in `src/api/types.ts` and mirror
-`ibn_monitor.read_model.ReadModel.view()`. See also
-`../docs/operator/ops-state-api.md`.
+Start with the [documentation index](./docs/README.md):
 
-## Extract to its own repo
+- [operator guide](./docs/operator-guide.md)
+- [configuration and deployment](./docs/configuration.md)
+- [`GET /api/state` contract](./docs/api/ops-state.md)
+- [architecture](./docs/architecture.md)
+- [development and contract-sync workflow](./docs/development.md)
 
-See [EXTRACT.md](./EXTRACT.md).
+Types live in `src/api/types.ts`; runtime acceptance is defined by
+`src/api/validateOpsState.ts`.
+
+## Security
+
+The sensor ops listener has no built-in authentication. Keep it loopback-only
+and use an authenticated reverse proxy or SSH tunnel for remote access. See
+[configuration and deployment](./docs/configuration.md#production-deployment).
